@@ -15,8 +15,14 @@ class TapNBAStats(Tap):
 
     name = "tap-nba-api"
 
-    # TODO: Update this section with the actual config values you expect:
-    config_jsonschema = th.PropertiesList().to_dict()
+    config_jsonschema = th.PropertiesList(
+        th.Property(
+            "season",
+            th.IntegerType,
+            required=True,
+            description="2021 for 2021-2022 season",
+        )
+    ).to_dict()
 
     def discover_streams(self) -> List[Stream]:
         """Return a list of discovered streams."""

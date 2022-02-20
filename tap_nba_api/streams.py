@@ -46,6 +46,9 @@ class LeagueGameLogStream(NBAStatsStream):
     ).to_dict()
 
     def get_records(self, context: Optional[dict]) -> Iterable[dict]:
-        records = leaguegamelog.LeagueGameLog().get_normalized_dict()["LeagueGameLog"]
+        date_from = self.get_starting_replication_key_value(context)
+        records = leaguegamelog.LeagueGameLog(
+            season=self.season, date_from_nullable=date_from
+        ).get_normalized_dict()["LeagueGameLog"]
         for record in records:
             yield record
