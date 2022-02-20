@@ -4,7 +4,11 @@ from singer_sdk import typing as th
 
 from tap_nba_api.client import NBAStatsStream
 
-from nba_api.stats.endpoints import leaguegamelog
+from nba_api.stats.endpoints import leaguegamelog, playbyplayv2
+
+
+def home_or_away(record):
+    return "HOME" if " vs. " in record["MATCHUP"] else "AWAY"
 
 
 class LeagueGameLogStream(NBAStatsStream):
@@ -45,6 +49,9 @@ class LeagueGameLogStream(NBAStatsStream):
         th.Property("VIDEO_AVAILABLE", th.IntegerType),
     ).to_dict()
 
+    def get_child_context(self, record: dict, context: Optional[dict]) -> dict:
+        return {"GAME_ID": record["GAME_ID"]} if home_or_away(record) == "HOME" else {}
+
     def get_records(self, context: Optional[dict]) -> Iterable[dict]:
         date_from = self.get_starting_replication_key_value(context)
         records = leaguegamelog.LeagueGameLog(
@@ -52,3 +59,56 @@ class LeagueGameLogStream(NBAStatsStream):
         ).get_normalized_dict()["LeagueGameLog"]
         for record in records:
             yield record
+
+
+class PlayByPlayV2Stream(NBAStatsStream):
+    name = "playbyplayv2"
+    primary_keys = ["GAME_ID", "EVENTNUM"]
+    replication_key = None
+    parent_stream_type = LeagueGameLogStream
+
+    schema = th.PropertiesList(
+        th.Property("GAME_ID", th.StringType),
+        th.Property("EVENTNUM", th.IntegerType),
+        th.Property("EVENTMSGTYPE", th.IntegerType),
+        th.Property("EVENTMSGACTIONTYPE", th.IntegerType),
+        th.Property("PERIOD", th.IntegerType),
+        th.Property("WCTIMESTRING", th.StringType),
+        th.Property("PCTIMESTRING", th.StringType),
+        th.Property("HOMEDESCRIPTION", th.StringType),
+        th.Property("NEUTRALDESCRIPTION", th.StringType),
+        th.Property("VISITORDESCRIPTION", th.StringType),
+        th.Property("SCORE", th.StringType),
+        th.Property("SCOREMARGIN", th.StringType),
+        th.Property("PERSON1TYPE", th.IntegerType),
+        th.Property("PLAYER1_ID", th.IntegerType),
+        th.Property("PLAYER1_NAME", th.StringType),
+        th.Property("PLAYER1_TEAM_ID", th.IntegerType),
+        th.Property("PLAYER1_TEAM_CITY", th.StringType),
+        th.Property("PLAYER1_TEAM_NICKNAME", th.StringType),
+        th.Property("PLAYER1_TEAM_ABBREVIATION", th.StringType),
+        th.Property("PERSON2TYPE", th.IntegerType),
+        th.Property("PLAYER2_ID", th.IntegerType),
+        th.Property("PLAYER2_NAME", th.StringType),
+        th.Property("PLAYER2_TEAM_ID", th.IntegerType),
+        th.Property("PLAYER2_TEAM_CITY", th.StringType),
+        th.Property("PLAYER2_TEAM_NICKNAME", th.StringType),
+        th.Property("PLAYER2_TEAM_ABBREVIATION", th.StringType),
+        th.Property("PERSON3TYPE", th.IntegerType),
+        th.Property("PLAYER3_ID", th.IntegerType),
+        th.Property("PLAYER3_NAME", th.StringType),
+        th.Property("PLAYER3_TEAM_ID", th.IntegerType),
+        th.Property("PLAYER3_TEAM_CITY", th.StringType),
+        th.Property("PLAYER3_TEAM_NICKNAME", th.StringType),
+        th.Property("PLAYER3_TEAM_ABBREVIATION", th.StringType),
+        th.Property("VIDEO_AVAILABLE_FLAG", th.IntegerType),
+    ).to_dict()
+
+    def get_records(self, context: Optional[dict]) -> Iterable[dict]:
+        if context:
+            game_id = context.get("GAME_ID")
+            records = playbyplayv2.PlayByPlayV2(game_id=game_id).get_normalized_dict()[
+                "PlayByPlay"
+            ]
+            for record in records:
+                yield record
