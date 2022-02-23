@@ -5,6 +5,7 @@ from singer_sdk import typing as th
 from tap_nba_api.client import NBAStatsStream
 
 from nba_api.stats.endpoints import leaguegamelog, playbyplayv2
+from nba_api.live.nba.endpoints import playbyplay
 
 
 def home_or_away(record):
@@ -111,4 +112,81 @@ class PlayByPlayV2Stream(NBAStatsStream):
                 "PlayByPlay"
             ]
             for record in records:
+                yield record
+
+
+class PlayByPlayLiveStream(NBAStatsStream):
+    name = "playbyplaylive"
+    primary_keys = ["GAME_ID", "actionNumber"]
+    replication_key = None
+    parent_stream_type = LeagueGameLogStream
+
+    schema = th.PropertiesList(
+        th.Property("GAME_ID", th.StringType),
+        th.Property("actionNumber", th.IntegerType),
+        th.Property("clock", th.StringType),
+        th.Property("timeActual", th.StringType),
+        th.Property("period", th.IntegerType),
+        th.Property("periodType", th.StringType),
+        th.Property("teamId", th.IntegerType),
+        th.Property("teamTricode", th.StringType),
+        th.Property("actionType", th.StringType),
+        th.Property("subType", th.StringType),
+        th.Property("descriptor", th.StringType),
+        th.Property("personId", th.IntegerType),
+        th.Property("x", th.NumberType),
+        th.Property("y", th.NumberType),
+        th.Property("possession", th.IntegerType),
+        th.Property("scoreHome", th.StringType),
+        th.Property("scoreAway", th.StringType),
+        th.Property("edited", th.StringType),
+        th.Property("orderNumber", th.IntegerType),
+        th.Property("xLegacy", th.IntegerType),
+        th.Property("yLegacy", th.IntegerType),
+        th.Property("isFieldGoal", th.IntegerType),
+        th.Property("jumpBallRecoveredName", th.StringType),
+        th.Property("jumpBallRecoverdPersonId", th.IntegerType),
+        th.Property("side", th.StringType),
+        th.Property("playerName", th.StringType),
+        th.Property("playerNameI", th.StringType),
+        th.Property("jumpBallWonPlayerName", th.StringType),
+        th.Property("jumpBallWonPersonId", th.IntegerType),
+        th.Property("jumpBallLostPlayerName", th.StringType),
+        th.Property("jumpBallLostPersonId", th.IntegerType),
+        th.Property("shotResult", th.StringType),
+        th.Property("stealPlayerName", th.StringType),
+        th.Property("foulPersonalTotal", th.IntegerType),
+        th.Property("foulDrawnPlayerName", th.StringType),
+        th.Property("assistPlayerNameInitial", th.StringType),
+        th.Property("officialId", th.IntegerType),
+        th.Property("assistTotal", th.IntegerType),
+        th.Property("blockPlayerName", th.StringType),
+        th.Property("assistPersonId", th.IntegerType),
+        th.Property("stealPersonId", th.IntegerType),
+        th.Property("shotDistance", th.NumberType),
+        th.Property("shotActionNumber", th.IntegerType),
+        th.Property("reboundDefensiveTotal", th.IntegerType),
+        th.Property("foulTechnicalTotal", th.IntegerType),
+        th.Property("pointsTotal", th.IntegerType),
+        th.Property("value", th.StringType),
+        th.Property("reboundTotal", th.IntegerType),
+        th.Property("blockPersonId", th.IntegerType),
+        th.Property("reboundOffensiveTotal", th.IntegerType),
+        th.Property("foulDrawnPersonId", th.IntegerType),
+        th.Property("turnoverTotal", th.IntegerType),
+    ).to_dict()
+
+    def get_records(self, context: Optional[dict]) -> Iterable[dict]:
+        if context:
+            game_id = context.get("GAME_ID")
+            records = playbyplay.PlayByPlay(game_id=game_id).get_dict()["game"][
+                "actions"
+            ]
+            for record in records:
+                record = {
+                    k: v
+                    for k, v in record.items()
+                    if k not in ["qualifiers", "personIdsFilter"]
+                }
+                record["GAME_ID"] = game_id
                 yield record

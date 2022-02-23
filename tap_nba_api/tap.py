@@ -3,11 +3,16 @@ from typing import List
 from singer_sdk import Tap, Stream
 from singer_sdk import typing as th
 
-from tap_nba_api.streams import LeagueGameLogStream, PlayByPlayV2Stream
+from tap_nba_api.streams import (
+    LeagueGameLogStream,
+    PlayByPlayLiveStream,
+    PlayByPlayV2Stream,
+)
 
 STREAM_TYPES = [
     LeagueGameLogStream,
     PlayByPlayV2Stream,
+    PlayByPlayLiveStream,
 ]
 
 
